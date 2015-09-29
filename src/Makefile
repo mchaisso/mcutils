@@ -1,8 +1,9 @@
 TARGETS=samToBed samToDotPlot samLiftover
-
+INSTALLDIR?=../bin
 all: $(TARGETS)
 install:
-	cp $(TARGETS) ../bin
+	mkdir -p $(INSTALLDIR)
+	cp $(TARGETS) $(INSTALLDIR)
 
 CPPOPTS= -O3
 samToBed: SamToBed.cpp
