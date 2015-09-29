@@ -146,8 +146,6 @@ int main(int argc, char* argv[]) {
 		cout << "Usage: samLiftover file.sam coordinates.bed out.bed [options]" << endl;
 		cout << "  --dir 0|1 (0)  Map from coordinates on the query to the target." << endl;
 		cout << "                 A value of 1 maps from the target to the query." << endl;
-		cout << "  --bedline      Print the remainder of the BED line after the " << endl
-			 << "                 genome interval." << endl;
 		exit(1);
 	}
 
@@ -319,15 +317,17 @@ int main(int argc, char* argv[]) {
 		  badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
 		}
 		else {
-		  bedOut << mapChrom << "\t" << mapStart << "\t" << mapEnd 
-				 << "\t" << chrom << "\t" << start << "\t"<< end;
-		  if (printBedLine) {
+			bedOut << mapChrom << "\t" << mapStart << "\t" << mapEnd;
 			int s;
 			for (s = 0; s < remainder.size(); s++) {
-			  bedOut << "\t" << remainder[s];
+				bedOut << "\t" << remainder[s];
 			}
-		  }
-		  bedOut << endl;
+			//
+			// Add the originals just in case
+			//
+			bedOut << "\t" << chrom << "\t" << start << "\t"<< end;
+			
+			bedOut << endl;
 		}
 	}
 	
