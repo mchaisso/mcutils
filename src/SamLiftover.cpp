@@ -132,17 +132,18 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 			mapStrand = strandMap[contig][i];
 			if (dir == T) {
 				if (strandMap[contig][i] != 0) {
-					mapPos = lengthMap[contig][i] - pos - 1;
+					mapPos = lengthMap[contig][i] - mapPos - 1;
 				}
 			}
 			return true;
 		}
+
 	}
 	return false;
 }
 
 int main(int argc, char* argv[]) {
-	if (argc < 3) {
+	if (argc < 4) {
 		cout << "Usage: samLiftover file.sam coordinates.bed out.bed [options]" << endl;
 		cout << "  --dir 0|1 (0)  Map from coordinates on the query to the target." << endl;
 		cout << "                 A value of 1 maps from the target to the query." << endl;
@@ -244,7 +245,7 @@ int main(int argc, char* argv[]) {
 		posMap[fromChrom].push_back(Blocks());
 		strands[fromChrom].push_back(flag & 0x16);
 		
-		chromMap[fromChrom].push_back(chrom);
+		chromMap[fromChrom].push_back(toChrom);
 		Blocks *curBlocks = &(posMap[fromChrom][posMap[fromChrom].size()-1]);
 
 		while (i < cigar.size()) {
@@ -284,6 +285,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	string bedLine;
+
 	while (getline(bedIn, bedLine)) {
 		if (bedLine.size() == 0) {
 			break;

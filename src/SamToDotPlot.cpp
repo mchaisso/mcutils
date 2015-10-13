@@ -13,8 +13,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	ifstream samIn(argv[1]);
-	int tPos = 0;
-	int qPos = 0;
 	int contigIndex = 0;
 	string previousContig = "";
 	string previousChrom = "";
@@ -46,6 +44,8 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		int s1 = 0;
+		int tPos = 0;
+		int qPos = 0;
 		int nMatch = 0, nIns = 0, nDel = 0, nMisMatch = 0;
 		int frontClip = 0, endClip = 0;
 		int i = 0;
@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
 			if (op == 'S' or op == 'H') {
 				if (op == 'S' and alnStarted == false) {
 					frontClip = len;
+	cerr << "front clip: " << frontClip << endl;
 					qPos = frontClip;
 				}
 				else if (op == 'S' and alnStarted == true) {
@@ -72,14 +73,14 @@ int main(int argc, char* argv[]) {
 					qPlotPos = seqLen - qPos;
 				}
 				if (op == 'M') {
-					cout << tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
+					cout << pos + tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
 					nMatch += len;
 					tPos += len;
 					qPos += len;
 				}
 				if (op == '=') {
 					nMatch +=len;
-					cout << tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
+					cout << pos + tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
 					tPos += len;
 					qPos += len;
 				}
