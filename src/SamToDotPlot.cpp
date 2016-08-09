@@ -8,11 +8,16 @@
 using namespace std;
 int main(int argc, char* argv[]) {
 	if (argc < 2) {
-		cout << "Usage: samToBed file.sam " << endl;
+		cout << "Usage: samToBed file.sam [seqlen]" << endl;
+		cout << " seqLen is the length of the query." << endl;
 		exit(1);
 	}
 
 	ifstream samIn(argv[1]);
+	int setSeqLen = 0;
+	if (argc > 2) {
+		setSeqLen = atoi(argv[2]);
+	}
 	int contigIndex = 0;
 	string previousContig = "";
 	string previousChrom = "";
@@ -37,9 +42,11 @@ int main(int argc, char* argv[]) {
 		string seq;
 
 		lineStrm >> contig >> flag >> chrom >> pos >> mapq >> cigar >> t1 >> t2 >> alnLength >> seq;
+		/*
 		if ((previousContig != "" and contig != previousContig) or( previousChrom != "" and previousChrom != chrom)) {
 			break;
 		}
+		*/
 		if (chrom == "*") {
 			continue;
 		}
@@ -50,21 +57,35 @@ int main(int argc, char* argv[]) {
 		int frontClip = 0, endClip = 0;
 		int i = 0;
 		bool alnStarted = false;
-		int seqLen = seq.size();
-		int strand = flag && 0x16;
+		
+		int seqLen;
+		if (setSeqLen > 0) {
+			cerr << "SET SEQLEN: " << setSeqLen << endl;
+			seqLen = setSeqLen;
+		} else {
+			seqLen = seq.size();
+		}
+		int strand = (flag & 0x16) >> 4;
+
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
 			char op = cigar[i];
 			if (op == 'S' or op == 'H') {
-				if (op == 'S' and alnStarted == false) {
-					frontClip = len;
-	cerr << "front clip: " << frontClip << endl;
-					qPos = frontClip;
+				if (alnStarted == false) {
+					if (op == 'S') {
+						frontClip +=len;
+						qPos += len;
+					}
+					else if (op == 'H') {
+						frontClip +=len;
+						qPos+=len;
+					}
 				}
-				else if (op == 'S' and alnStarted == true) {
-					endClip = len;
+				else if ((op == 'H' or op == 'S') and alnStarted == true) {
+					endClip += len;
 				}
+				
 			}
 			else {
 				alnStarted = true;
@@ -73,14 +94,14 @@ int main(int argc, char* argv[]) {
 					qPlotPos = seqLen - qPos;
 				}
 				if (op == 'M') {
-					cout << pos + tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
+					cout << qPlotPos << "\t" << pos + tPos << "\t"  << len << "\t" << contigIndex << "\t" << strand << endl;
 					nMatch += len;
 					tPos += len;
 					qPos += len;
 				}
 				if (op == '=') {
 					nMatch +=len;
-					cout << pos + tPos << "\t" << qPlotPos << "\t" << len << "\t" << contigIndex << "\t" << strand << endl;
+					cout << qPlotPos << "\t" << pos + tPos << "\t"  << len << "\t" << contigIndex << "\t" << strand << endl;
 					tPos += len;
 					qPos += len;
 				}

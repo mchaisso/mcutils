@@ -5,7 +5,7 @@ install:
 	mkdir -p $(INSTALLDIR)
 	cp $(TARGETS) $(INSTALLDIR)
 
-CPPOPTS= -O3 
+CPPOPTS= -g
 samToBed: SamToBed.cpp
 	g++ $(CPPOPTS) $^ -o $@
 

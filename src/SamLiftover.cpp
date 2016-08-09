@@ -73,6 +73,9 @@ bool SetPos(Blocks &blocks, int index, int pos, int &mapPos) {
 }
 
 bool SearchBlocks(Blocks &blocks, int pos, int &mapPos) {
+	if (blocks.size() == 0) {
+		return 0;
+	}
 	assert(blocks.size() > 0);
 	Blocks::iterator lb;
 	lb = lower_bound(blocks.begin(), blocks.end(), pos);
@@ -229,7 +232,7 @@ int main(int argc, char* argv[]) {
 			fromChrom = chrom;
 			toChrom   = contig;
 		}
-		tPos = pos;
+		tPos = pos-1;
 		int slash = fromChrom.find('/');
 		if (slash != fromChrom.npos) {
 		  fromChrom = fromChrom.substr(0,slash);
