@@ -13,7 +13,7 @@ using namespace std;
 typedef pair<int,int> Coordinate;
 int Q = 0;
 int T = 1;
-int dir = Q;
+int dir = Q;  // this gives whether you are converting FROM the query Q, or FROM the target T
 
 class Block {
 public:
@@ -52,72 +52,98 @@ typedef map<string, vector<int> > LengthMap;
 typedef map<string, vector<string> > ChromMap;
 
 
-bool SetPos(Blocks &blocks, int index, int pos, int &mapPos) {
+bool SetPos(const int nStrand, Blocks &blocks, int index, int pos, int &mapPos) {
 	assert(blocks[index].Pos() <= pos);
+
+
 	if (index == blocks.size() - 1 and pos > blocks[index].Pos() + blocks[index].l) {
 		return false;
 	}
-		
+
 	if (index < blocks.size() - 1) {
-		assert(blocks[index+1].Pos() >= pos);
+       // changed DG 161206
+       //assert(blocks[index+1].Pos() >= pos);
+       assert(blocks[index+1].Pos() > pos);
 	}
-	if (blocks[index].Pos() + blocks[index].l >= pos) {
-		mapPos = blocks[index].Map() + pos - blocks[index].Pos()  ;
+
+
+    // changed DG 161206
+	// if (blocks[index].Pos() + blocks[index].l >= pos) {
+	if (blocks[index].Pos() + blocks[index].l > pos) {
+       if ( nStrand ) {
+
+          mapPos = blocks[index].Map() + blocks[index].Pos() - pos;
+
+       }
+       else {
+
+          mapPos = blocks[index].Map() + pos - blocks[index].Pos()  ;
+       }
 	}
 	else {
 		// 
 		// This position is in a gap.
-		mapPos = blocks[index].Map() + blocks[index].l;
+       if ( nStrand ) {
+          mapPos = blocks[index].Map() - blocks[index].l;
+       }
+       else {
+          mapPos = blocks[index].Map() + blocks[index].l;
+       }
 	}
 	return true;
 }
 
-bool SearchBlocks(Blocks &blocks, int pos, int &mapPos) {
-	if (blocks.size() == 0) {
-		return 0;
-	}
+bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
 	assert(blocks.size() > 0);
 	Blocks::iterator lb;
 	lb = lower_bound(blocks.begin(), blocks.end(), pos);
 	int i = lb - blocks.begin();
 	//
-	// Find the index that contains the block, or none if no such block exists.
+    // Find the index that contains the block, or none if no such block exists.
 	//
-	if (i == blocks.size()-1) {
-		int last = blocks.size()-1;
-		if (blocks[last].Pos() + blocks[last].l >= pos  and blocks[last].Pos() < pos) {
-			if (blocks[last].Pos() > pos) {
-				i = last-1;		
-			}
-			else {
-				i = last;
-			}
-		}
-		else {
-			return false;
-		}
-	}
-	else if (i == 0) {
-		//
-		// Either the position is too early, or right at the start
-		//
-		if (blocks[i].Pos() == pos) {
-			mapPos = blocks[i].Map();
-			return true;
-		}
-		else {
-			return false;
-		}
-	} else {
-		i = i - 1;
-	}
 
-	assert(blocks[i].Pos() <= pos);
-	return SetPos(blocks, i, pos, mapPos);
+    if ( i >= blocks.size() ) { 
+
+       // case in which lower_bound failed (all blocks are less than
+       // pos).  However, the last block might still be the right now.
+
+       i = blocks.size() - 1;
+
+       if ( (blocks[i].Pos() + blocks[i].l) <= pos ) {
+          // unfortunately, pos is greater than the last block
+          return false;
+       }
+    }
+
+    if ( pos < blocks[i].Pos()  ) {
+       if ( i == 0 ) {
+          return false;
+       }
+       else {
+          --i;
+       }
+    }
+
+    // normal case:
+    if ( not ( blocks[i].Pos() <= pos and (pos < (blocks[i].Pos() + blocks[i].l) ) ) ) {
+       // case in which pos is between 2 blocks due to there being
+       // a deletion in this domain
+
+       assert( i < ( blocks.size() - 1 ) );
+       assert( (blocks[i].Pos() + blocks[i].l ) <= pos );
+       assert( pos < blocks[i+1].Pos() );
+       mapPos = blocks[i+1].Map();
+       return true;
+    }
+
+
+	return SetPos(nStrand, blocks, i, pos, mapPos);
 }
 
 bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, LengthMap &lengthMap,
 				  string contig, int pos,  string &mapChrom, int &mapPos, int &mapStrand) {
+
+
 	if (posMap.find(contig) == posMap.end()) {
 		return false;
 	}
@@ -125,22 +151,16 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 	for (i = 0; i < posMap[contig].size(); i++) {
 		int searchPos = pos;
 
-		if (dir == Q) {
-			if (strandMap[contig][i] != 0) {
-				searchPos = lengthMap[contig][i] - pos - 1;
-			}
-		}
-		if (SearchBlocks(posMap[contig][i], searchPos, mapPos) == true) {
+		if (SearchBlocks(strandMap[contig][i], posMap[contig][i], searchPos, mapPos) == true) {
 			mapChrom = chromMap[contig][i];
 			mapStrand = strandMap[contig][i];
-			if (dir == T) {
-				if (strandMap[contig][i] != 0) {
-					mapPos = lengthMap[contig][i] - mapPos - 1;
-				}
-			}
+			//if (dir == T) {
+            // if (strandMap[contig][i] != 0) {
+            // mapPos = lengthMap[contig][i] - mapPos - 1;
+            // }
+            // }
 			return true;
 		}
-
 	}
 	return false;
 }
@@ -195,7 +215,7 @@ int main(int argc, char* argv[]) {
 		string line;
 		getline(samIn, line);
 		int tPos = 0;
-		int qPos = 0;
+		int qPos = 1; // sam files are 1-based
 
 		if (line.size() > 0 and line[0] == '@') {
 			continue;
@@ -246,11 +266,54 @@ int main(int argc, char* argv[]) {
 		}
 		lengths[fromChrom].push_back(seq.size());
 		posMap[fromChrom].push_back(Blocks());
-		strands[fromChrom].push_back(flag & 0x16);
+
+        // DG, fix 161205
+		// strands[fromChrom].push_back(flag & 0x16);
+		strands[fromChrom].push_back(flag & 0x10);
 		
 		chromMap[fromChrom].push_back(toChrom);
 		Blocks *curBlocks = &(posMap[fromChrom][posMap[fromChrom].size()-1]);
 
+       // in the case of bottom strand alignments, calculate the length
+        // of the query sequence.  This requires soft clipping so the 
+        // cigar will reflect the entire sequence--not just the aligned
+        // portion
+        
+        int nStrand = 1;
+        if ( flag & 0x10 ) {
+           // bottom strand alignment
+
+           nStrand = -1;
+
+           int nQueryLength = 0;
+           i = 0;
+           while( i < cigar.size() ) {
+              int len = atoi(&cigar[i]);
+
+              // skip over the leading number
+              while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
+
+              char op = cigar[i];
+
+
+              if ( (char*) strchr( "SHMI=X", op ) != 0 ) {
+                 nQueryLength += len;
+
+              }
+              ++i;
+           }
+
+
+           qPos = nQueryLength;  // start at last base position (1-based)
+        }
+        else {
+           qPos = 1; // start at 1st base position (1-based)
+        }
+
+
+        // end calculating length
+
+        i = 0;  // go through cigar again
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
@@ -258,23 +321,39 @@ int main(int argc, char* argv[]) {
 			if (op == 'S' or op == 'H') {
 				if (op == 'S' and alnStarted == false) {
 					frontClip = len;
-					qPos = frontClip;
+					qPos += nStrand*frontClip;
 				}
 				else if (op == 'S' and alnStarted == true) {
 					endClip = len;
+                    qPos += nStrand*len;
 				}
 			}
 			else {
 				alnStarted = true;
 				if (op == 'M' or op == '=' or op == 'X') {
-					curBlocks->push_back(Block(tPos, qPos, len));
+
+                   // Block.Pos() should be the *least* value of the
+                   // alignment in the Block. This occurs naturally
+                   // when the source is the reference (whether the
+                   // alignment is top or bottom strand), but if the
+                   // source is query, the the least value occurs at
+                   // the end of the = alignment. DG. Jan 5, 2017
+
+                   int nSetQPos = qPos;
+                   int nSetTPos = tPos;
+                   if ( ( dir == Q ) && ( flag & 0x10 ) ) {
+                      nSetQPos = qPos - len + 1;
+                      nSetTPos = tPos + len - 1;
+                   }
+
+					curBlocks->push_back(Block(nSetTPos, nSetQPos, len));
 					nMatch += len;
 					tPos += len;
-					qPos += len;
+					qPos += nStrand*len;
 				}
 				else if (op == 'I') {
 					nIns += len;
-					qPos += len;
+					qPos += nStrand*len;
 				}
 				else if (op == 'D') {
 					nDel += len;
@@ -283,6 +362,22 @@ int main(int argc, char* argv[]) {
 			}
 			i+=1;
 		}
+
+        // the Blocks must be in order according to the position they
+        // will be searched by.  If they are searched by target (dir =
+        // 1), they will always be in order.  If they are searched by
+        // query (dir = 0), they will be in order for top strand
+        // alignments, but in reverse order for bottom strand
+        // alignments.  So reverse them. DG, 1/7/2017
+
+        if ( ( dir == Q ) && ( flag & 0x10 ) ) {
+           std::reverse( curBlocks->begin(), curBlocks->end() );
+        }
+
+
+
+
+
 		previousContig = contig;
 		contigIndex ++;
 	}
@@ -308,17 +403,25 @@ int main(int argc, char* argv[]) {
 		bool foundStart, foundEnd;
 		
 		foundStart = SearchContig(posMap, chromMap, strands, lengths,
-								  chrom, start, mapChrom, mapStart, mapFrontStrand);
+								  chrom, start+1, mapChrom, mapStart, mapFrontStrand);
+
+
+        // end-1 is the 0-based coordinate for the end of the alignment
+        // and SearchContig uses 0-based coordinates (DG, 161205)
 		foundEnd = SearchContig(posMap, chromMap, strands, lengths,
 								chrom, end, mapEndChrom, mapEnd, mapEndStrand);
+
 
 		if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
 		  int temp = mapStart;
 		  mapStart = mapEnd; 
 		  mapEnd   = temp;
 		}
+        
+        --mapStart; // convert to 0-based for bed format
 
 		if (foundStart == false or foundEnd == false or mapChrom != mapEndChrom) {
+
 		  badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
 		}
 		else {
