@@ -120,8 +120,9 @@ bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
        return true;
     }
 
-
-	return SetPos(nStrand, blocks, i, pos, mapPos);
+		bool res = SetPos(nStrand, blocks, i, pos, mapPos);
+		cout << "finishn with " << int(res) << endl;
+		return res;
 }
 
 bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, LengthMap &lengthMap,
@@ -137,6 +138,8 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 		if (SearchBlocks(strandMap[contig][i], posMap[contig][i], searchPos, mapPos) == true) {
 			mapChrom = chromMap[contig][i];
 			mapStrand = strandMap[contig][i];
+			mapContig = contig;
+			mapContigIndex = i;
 			return true;
 		}
 	}

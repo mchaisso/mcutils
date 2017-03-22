@@ -141,17 +141,21 @@ int main(int argc, char* argv[]) {
 				mapChrom == mapEndChrom and
 				startContig == endContig) {
 			fastaOut << ">" << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
-			assert(clipMap.find(startContig) != clipMap.end());
-			assert(clipMap[startContig].size() > startContigIndex);
 			assert(seqMap.find(startContig) != seqMap.end());
 			assert(seqMap[startContig].size() > startContigIndex);
+
+			int clipStart= 0;
 			
-			int seqStart = mapStart - clipMap[startContig][startContigIndex];
-			int seqEnd   = mapEnd   - clipMap[startContig][startContigIndex];
+			if (clipMap.find(startContig) != clipMap.end() and clipMap[startContig].size() > startContigIndex) {
+				clipStart = clipMap[startContig][startContigIndex];
+			}
+			int seqStart = mapStart - clipStart;
+			int seqEnd   = mapEnd   - clipStart;
 
 			assert(seqStart < seqMap[startContig][startContigIndex].size());
 			assert(seqEnd  < seqMap[startContig][startContigIndex].size());			
 			string seq = seqMap[startContig][startContigIndex].substr(seqStart, seqEnd - seqStart);
+			fastaOut << seq << endl;
 			
 		}
 	}
