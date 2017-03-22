@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 		foundEnd = SearchContig(posMap, chromMap, strands, lengths,
 								chroms[r], ends[r], mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
 
-
+		cerr << "RES: " << chroms[r] << ":" << starts[r] << "-" << ends[r] << " start " << (int)foundStart << " end " << (int) foundEnd << endl;
 		if (foundStart == true and
 				foundEnd == true and
 				mapChrom == mapEndChrom and
@@ -156,6 +156,7 @@ int main(int argc, char* argv[]) {
 			assert(seqEnd  < seqMap[startContig][startContigIndex].size());			
 			string seq = seqMap[startContig][startContigIndex].substr(seqStart, seqEnd - seqStart);
 			fastaOut << seq << endl;
+
 			
 		}
 	}
