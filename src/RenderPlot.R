@@ -150,7 +150,9 @@ if (length(queryTrack) > 0) {
   tHeight = ySpan*frac
 
   nTrack <- length(queryTrack$V2)
-  nRows <- 3  
+  print("NTracks")
+  print(nTrack)
+  nRows <- 25
   yOffset <- seq(0,nCols)*tHeight  
   yOffsets <- yOffset[(seq(1,nTrack)%%(nRows+1))+1]
 
@@ -160,11 +162,11 @@ if (length(queryTrack) > 0) {
   yB <- rep(tHeight*-0.25, nTrack)+min(t$V2) + yOffsets
   yT <- rep(tHeight*-1.25, nTrack)+min(t$V2) + yOffsets
   yBText <- rep(tHeight, nTrack)+min(t$V2)  
-  
   h <- abs(yB[1]-yT[1])
   rect(xB,yT+h/2,xT,yT+h/2,col="blue")
-  lapply(seq(1,length(queryTrack)), function(i) PlotGeneX(queryTrack[i,], yT[i], h))
-
+  print(seq(1,length(xB)))
+  lapply(seq(1,length(xB)), function(i) PlotGeneX(queryTrack[i,], yT[i], h))
+  lapply(seq(1,length(xB)), function(i) print(queryTrack[i,]))
 
   text(xB,yT +(yB-yT)*0.35, labels=queryTrack$V4, pos=2)
 
