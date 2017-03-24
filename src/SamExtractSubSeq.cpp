@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 	ClipMap clipMap;
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
-  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap);
+  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, true);
 	string bedLine;
 
 	int r;

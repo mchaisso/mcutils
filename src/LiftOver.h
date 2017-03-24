@@ -152,7 +152,8 @@ int BuildMapDB(ifstream &samIn, int dir,
 							 LengthMap &lengths,
 							 map<string, vector<string> > &chromMap,
 							 map<string, vector<string> > &seqMap,
-							 ClipMap &clipMap) {
+							 ClipMap &clipMap,
+							 bool keepForward=false) {
 	int contigIndex = 0;
 	string previousContig = "";
 	while (samIn) {
@@ -224,7 +225,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 		// portion
         
 		int nStrand = 1;
-		if ( flag & 0x10 ) {
+		if ( keepForward == false and flag & 0x10 ) {
 			// bottom strand alignment
 
 			nStrand = -1;
