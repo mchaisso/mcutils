@@ -126,13 +126,14 @@ bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
 }
 
 bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, LengthMap &lengthMap,
-									string contig, int pos,  string &mapChrom, int &mapPos, int &mapStrand, string  &mapContig, int &mapContigIndex) {
+									string contig, int pos,  string &mapChrom, int &mapPos, int &mapStrand, string  &mapContig, int &mapContigIndex,
+									int startBlockIndex=0) {
 
 	if (posMap.find(contig) == posMap.end()) {
 		return false;
 	}
 	int i;
-	for (i = 0; i < posMap[contig].size(); i++) {
+	for (i = startBlockIndex; i < posMap[contig].size(); i++) {
 		int searchPos = pos;
 
 		if (SearchBlocks(strandMap[contig][i], posMap[contig][i], searchPos, mapPos) == true) {

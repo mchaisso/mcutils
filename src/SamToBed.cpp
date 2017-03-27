@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		if (line.size() == 0) {
-			break;
+			continue;
 		}
 
 		stringstream lineStrm(line);

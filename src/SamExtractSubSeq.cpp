@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 		if (strcmp(argv[argi], "--region") == 0) {
 			regions.push_back(argv[++argi]);
 		}
-		else if (strcmp(argv[argi], "--bedline") == 0) {
+		else if (strcmp(argv[argi], "--bed") == 0) {
 			bedFileName = argv[++argi];
 		}
 		else {
@@ -132,8 +132,13 @@ int main(int argc, char* argv[]) {
 
         // end-1 is the 0-based coordinate for the end of the alignment
         // and SearchContig uses 0-based coordinates (DG, 161205)
-		foundEnd = SearchContig(posMap, chromMap, strands, lengths,
-								chroms[r], ends[r], mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
+		if (foundStart) {
+			//
+			// Do search for next position, but starting in the block of the previous position.
+			//
+			foundEnd = SearchContig(posMap, chromMap, strands, lengths,
+															chroms[r], ends[r], mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex, startContigIndex);
+		}
 
 		cerr << "RES: " << chroms[r] << ":" << starts[r] << "-" << ends[r] << " start " << (int)foundStart << " end " << (int) foundEnd << endl;
 		if (foundStart == true and
@@ -145,15 +150,20 @@ int main(int argc, char* argv[]) {
 			assert(seqMap[startContig].size() > startContigIndex);
 
 			int clipStart= 0;
-			
+
 			if (clipMap.find(startContig) != clipMap.end() and clipMap[startContig].size() > startContigIndex) {
 				clipStart = clipMap[startContig][startContigIndex];
 			}
 			int seqStart = mapStart - clipStart;
-			int seqEnd   = mapEnd   - clipStart;
+			int clipEnd=0;
+			if (clipMap.find(startContig) != clipMap.end() and clipMap[startContig].size() > startContigIndex) {
+				clipEnd = clipMap[startContig][startContigIndex];
+			}
+			
+			int seqEnd   = mapEnd   - clipEnd;
 
 			assert(seqStart < seqMap[startContig][startContigIndex].size());
-			assert(seqEnd  < seqMap[startContig][startContigIndex].size());			
+			assert(seqEnd  < seqMap[startContig][endContigIndex].size());			
 			string seq = seqMap[startContig][startContigIndex].substr(seqStart, seqEnd - seqStart);
 			fastaOut << seq << endl;
 
