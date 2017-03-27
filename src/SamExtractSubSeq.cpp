@@ -145,9 +145,11 @@ int main(int argc, char* argv[]) {
 				foundEnd == true and
 				mapChrom == mapEndChrom and
 				startContig == endContig) {
-			fastaOut << ">" << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
-			assert(seqMap.find(startContig) != seqMap.end());
-			assert(seqMap[startContig].size() > startContigIndex);
+			if (seqMap.find(startContig) != seqMap.end() or
+					seqMap[startContig].size() > startContigIndex ) {
+				cerr << "WARNING: Looup failed for " << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
+				continue;
+			}
 
 			int clipStart= 0;
 
@@ -162,8 +164,14 @@ int main(int argc, char* argv[]) {
 			
 			int seqEnd   = mapEnd   - clipEnd;
 
-			assert(seqStart < seqMap[startContig][startContigIndex].size());
-			assert(seqEnd  < seqMap[startContig][endContigIndex].size());			
+			if (seqStart >= seqMap[startContig][startContigIndex].size() or
+					seqEnd  >= seqMap[startContig][endContigIndex].size()) {
+				cerr << "WARNING: Looup failed for " << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
+				continue;
+			}
+			
+			fastaOut << ">" << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
+
 			string seq = seqMap[startContig][startContigIndex].substr(seqStart, seqEnd - seqStart);
 			fastaOut << seq << endl;
 
