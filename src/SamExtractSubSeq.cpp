@@ -145,8 +145,8 @@ int main(int argc, char* argv[]) {
 				foundEnd == true and
 				mapChrom == mapEndChrom and
 				startContig == endContig) {
-			if (seqMap.find(startContig) != seqMap.end() or
-					seqMap[startContig].size() > startContigIndex ) {
+			if (seqMap.find(startContig) == seqMap.end() or
+					seqMap[startContig].size() <= startContigIndex ) {
 				cerr << "WARNING: Looup failed for " << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
 				continue;
 			}
