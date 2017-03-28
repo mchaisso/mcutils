@@ -259,14 +259,16 @@ int BuildMapDB(ifstream &samIn, int dir,
 		i = 0;  // go through cigar again
 
 		int frontSoftClip;
+		int frontHardClip = 0;
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
 			char op = cigar[i];
+			
 			if (op == 'S' or op == 'H') {
 				if ((op == 'H' or op == 'S') and alnStarted == false) {
 					if (op == 'H') {
-						clipMap[fromChrom].push_back(len);
+						frontHardClip = len;
 					}
 					frontClip = len;
 					qPos += nStrand*frontClip;
@@ -321,6 +323,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 		if ( ( dir == Q ) && ( flag & 0x10 ) ) {
 			std::reverse( curBlocks->begin(), curBlocks->end() );
 		}
+		clipMap[fromChrom].push_back(frontHardClip);
 
 		previousContig = contig;
 		contigIndex ++;
