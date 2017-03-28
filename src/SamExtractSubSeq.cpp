@@ -62,6 +62,14 @@ int main(int argc, char* argv[]) {
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
   nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, true);
+	map<string, Strands>::iterator strandIt, strandEnd;
+	for (strandIt = strands.begin(); strandIt != strands.end(); ++strandIt) {
+		int si;
+		for (si = 0; si < (*strandIt).second.size(); si++) {
+			(*strandIt).second[si] = 0;
+		}
+	}
+	
 	string bedLine;
 
 	int r;
@@ -162,8 +170,11 @@ int main(int argc, char* argv[]) {
 				clipEnd = clipMap[startContig][startContigIndex];
 			}
 			
-			int seqEnd   = mapEnd   - clipEnd;
-
+			int seqEnd  = mapEnd   - clipEnd;
+			assert(seqStart <= seqEnd);
+			if (seqStart == seqEnd) {
+				continue;
+			}
 			if (seqStart >= seqMap[startContig][startContigIndex].size() or
 					seqEnd  >= seqMap[startContig][endContigIndex].size()) {
 				cerr << "WARNING: Looup failed for " << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;

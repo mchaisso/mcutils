@@ -121,7 +121,6 @@ bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
     }
 
 		bool res = SetPos(nStrand, blocks, i, pos, mapPos);
-		cout << "finishn with " << int(res) << endl;
 		return res;
 }
 
@@ -212,8 +211,6 @@ int BuildMapDB(ifstream &samIn, int dir,
 		lengths[fromChrom].push_back(seq.size());
 		posMap[fromChrom].push_back(Blocks());
 
-		// DG, fix 161205
-		// strands[fromChrom].push_back(flag & 0x16);
 		strands[fromChrom].push_back(flag & 0x10);
 		
 		chromMap[fromChrom].push_back(toChrom);
@@ -260,7 +257,6 @@ int BuildMapDB(ifstream &samIn, int dir,
 		// end calculating length
 
 		i = 0;  // go through cigar again
-
 
 		int frontSoftClip;
 		while (i < cigar.size()) {
