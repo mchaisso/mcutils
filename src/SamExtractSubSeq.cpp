@@ -9,47 +9,117 @@
 #include <algorithm>
 #include <vector>
 #include <assert.h>
+
+#include <stdio.h>
+#include <unistd.h>
+
+
 using namespace std;
 typedef pair<int,int> Coordinate;
 
 
 #include "LiftOver.h"
 
+struct opts{
+    std::string outputfile;
+    std::string samfile   ;
+    std::string prefix    ;
+    std::string region    ;
+    std::string bedfile   ;
+}globalOptions;
+
+
+void printHelp(void){
+    std::stringstream helpMessage;
+    helpMessage << "Usage: samExtractSubSeq -s file.sam -f out.fasta -r chr:start-end" << std::endl;
+    helpMessage << "       -r - optional - <STRING> A target position to extract" << std::endl;
+    helpMessage << "       -b - optional - <STRING> A bedfile of regions " << std::endl;
+    helpMessage << "       -s - required - <STRING> The SAM file containing query to target alignments" << std::endl;
+    helpMessage << "       -f - optional - <STRING> The output fasta [STDOUT]" << std::endl;
+    helpMessage << "       -p - optional - <STRING> A prefix for the output sequence name [NONE]" << std::endl;
+    std::cerr << helpMessage.str() << std::endl;
+};
 
 int main(int argc, char* argv[]) {
-	if (argc < 4) {
-		cout << "Usage: samExtractSubSeq file.sam out.fasta [options]" << endl;
-		cout << "  --region   chr:start-end" << endl;
-		cout << "  --bed      bed file of coordinates." << endl;
-		exit(1);
-	}
+
+    int c;
+    while ((c = getopt(argc, argv, "hr:s:f:p:b:")) != -1){
+        switch (c){
+        case 'h':
+            {
+                printHelp();
+                exit(1);
+            }
+        case 'r':
+            {
+                globalOptions.region = optarg;
+                std::cerr << "INFO: setting region: " << globalOptions.region << std::endl;
+                break;
+            }
+        case 's':
+            {
+                globalOptions.samfile = optarg;
+                break;
+            }
+        case 'f':
+            {
+                globalOptions.outputfile = optarg;
+                break;
+            }
+        case 'p':
+            {
+                globalOptions.prefix = optarg;
+                break;
+            }
+        case 'b':
+            {
+                globalOptions.bedfile = optarg;
+            }
+        case '?':
+            {
+            break;
+            }
+        }
+    }
+
+    if(globalOptions.samfile.empty()){
+        printHelp();
+        exit(1);
+    }
+	ifstream samIn(globalOptions.samfile.c_str());
+
+    if (samIn.good() == false) {
+        cerr << "FATAL: could not open sam file: " << argv[1] << endl;
+        exit(1);
+    }
+
+
+    if(globalOptions.region.empty() && globalOptions.bedfile.empty()){
+        std::cerr << "FATAL: need to specify a region -r OR -b a bedfile" << std::endl << std::endl;
+        exit(1);
+    }
+
+
 	int dir = Q;
-	ifstream samIn(argv[1]);
-	ofstream fastaOut(argv[2]);
-	
-	int argi = 3;
+    Block::dir = T;
+    dir=T;
+
+    ofstream fastaOut;
+    if(! globalOptions.outputfile.empty()){
+        fastaOut.open(globalOptions.outputfile.c_str());
+    }
+
 	bool printBedLine = false;
 	vector<string> regions;
-	string bedFileName = "";
-	while (argi < argc) {
-		if (strcmp(argv[argi], "--region") == 0) {
-			regions.push_back(argv[++argi]);
-		}
-		else if (strcmp(argv[argi], "--bed") == 0) {
-			bedFileName = argv[++argi];
-		}
-		else {
-			cout << "Bad command: " << argv[argi] << endl;
-			exit(1);
-		}
-		++argi;	
-	}
-	Block::dir = T;
-	dir=T;
+
+    if(!globalOptions.region.empty()){
+        regions.push_back(globalOptions.region);
+    }
+
 	if (samIn.good() == false) {
 		cerr << "Could not open " << argv[1] << endl;
 		exit(1);
-	}		
+	}
 
 	int contigIndex = 0;
 	map<string, MultiBlocks > posMap;
@@ -61,7 +131,7 @@ int main(int argc, char* argv[]) {
 	ClipMap clipMap;
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
-  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, true);
+    nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, true);
 	map<string, Strands>::iterator strandIt, strandEnd;
 	for (strandIt = strands.begin(); strandIt != strands.end(); ++strandIt) {
 		int si;
@@ -69,7 +139,7 @@ int main(int argc, char* argv[]) {
 			(*strandIt).second[si] = 0;
 		}
 	}
-	
+
 	string bedLine;
 
 	int r;
@@ -77,7 +147,7 @@ int main(int argc, char* argv[]) {
 	vector<int> starts;
 	vector<int> ends;
 	for (r = 0; r < regions.size(); r++) {
-		
+
     size_t start_pos = 0;
     while((start_pos = regions[r].find(",", start_pos)) != std::string::npos) {
         regions[r].replace(start_pos, 1, "");
@@ -102,10 +172,10 @@ int main(int argc, char* argv[]) {
 			ends.push_back(atoi(regions[r].substr(hyphen+1).c_str()));
 		}
 	}
-	if (bedFileName != "") {
+	if (!globalOptions.bedfile.empty()) {
 		ifstream bedIn;
-		bedIn.open(bedFileName.c_str());
-		
+		bedIn.open(globalOptions.bedfile.c_str());
+
 		while (getline(bedIn, bedLine)) {
 			if (bedLine.size() == 0) {
 				break;
@@ -123,9 +193,9 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	
+
 	for (r = 0; r < chroms.size(); r++ ) {
-		
+
 		string chrom, mapChrom, mapEndChrom;
 		int start, mapStart, end, mapEnd, mapFrontStrand, mapEndStrand;
 
@@ -160,7 +230,7 @@ int main(int argc, char* argv[]) {
 			}
 
 			int clipStart= 0;
-			
+
 			if (clipMap.find(startContig) != clipMap.end() and clipMap[startContig].size() > startContigIndex) {
 				clipStart = clipMap[startContig][startContigIndex];
 			}
@@ -169,7 +239,7 @@ int main(int argc, char* argv[]) {
 			if (clipMap.find(startContig) != clipMap.end() and clipMap[startContig].size() > startContigIndex) {
 				clipEnd = clipMap[startContig][startContigIndex];
 			}
-			
+
 			int seqEnd  = mapEnd   - clipEnd;
 
 			assert(seqStart <= seqEnd);
@@ -181,15 +251,22 @@ int main(int argc, char* argv[]) {
 				cerr << "WARNING: Looup failed for " << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
 				continue;
 			}
-			
-			fastaOut << ">" << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
 
+            std::stringstream ss;
+
+			ss << ">" << globalOptions.prefix << chroms[r] << ":" << starts[r] << "-" << ends[r] << "/" << mapChrom << ":" << mapStart << "-" << mapEnd << endl;
 			string seq = seqMap[startContig][startContigIndex].substr(seqStart, seqEnd - seqStart);
-			fastaOut << seq << endl;
 
-			
+            if(!globalOptions.outputfile.empty()){
+                fastaOut << ss.str();
+                fastaOut << seq << std::endl;
+            }
+            else{
+                std::cout << ss.str();
+                std::cout << seq << std::endl;
+            }
 		}
 	}
-	
+	return 0;
 }
-	
+
