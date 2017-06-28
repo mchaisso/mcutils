@@ -232,6 +232,14 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
+	if (globalOptions.writeBed) {
+		if (!globalOptions.outputfile.empty()) {
+			outFile << "#chrom\tstart\tend\tseq" << endl;
+		}
+		else {
+			std::cout << "#chrom\tstart\tend\tseq" << endl;
+		}
+	}
 
 	for (r = 0; r < chroms.size(); r++ ) {
 
