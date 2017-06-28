@@ -312,7 +312,7 @@ int main(int argc, char* argv[]) {
 					outFile << seq << std::endl;
 				}
 				else {
-					outFile << chroms[r] << "\t" << starts[r] << "\t" << chroms[r] << "\t" << seq << endl;
+					outFile << chroms[r] << "\t" << starts[r] << "\t" << ends[r] << "\t" << seq << endl;
 				}
 			}
 			else{
