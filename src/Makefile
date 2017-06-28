@@ -5,7 +5,7 @@ install:
 	mkdir -p $(INSTALLDIR)
 	cp $(TARGETS) $(INSTALLDIR)
 
-CPPOPTS= -O3
+CPPOPTS= -O3 
 subdepth: SubSampleDepth.cpp
 	g++ $(CPPOPTS) $^ -o $@
 

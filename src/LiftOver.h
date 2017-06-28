@@ -78,7 +78,9 @@ bool SetPos(const int nStrand, Blocks &blocks, int index, int pos, int &mapPos) 
 }
 
 bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
-	assert(blocks.size() > 0);
+	if (blocks.size() == 0) {
+		return false;
+	}
 	Blocks::iterator lb;
 	lb = lower_bound(blocks.begin(), blocks.end(), pos);
 	int i = lb - blocks.begin();
@@ -127,8 +129,12 @@ bool SearchBlocks(const int nStrand, Blocks &blocks, int pos, int &mapPos) {
 bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, LengthMap &lengthMap,
 									string contig, int pos,  string &mapChrom, int &mapPos, int &mapStrand, string  &mapContig, int &mapContigIndex,
 									int startBlockIndex=0) {
-
+	
 	if (posMap.find(contig) == posMap.end()) {
+		PosMap::iterator mapit;
+		for (mapit = posMap.begin(); mapit != posMap.end(); ++mapit){
+			cerr << mapit->first << endl;
+		}
 		return false;
 	}
 	int i;
@@ -166,7 +172,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 			continue;
 		}
 		if (line.size() == 0) {
-			break;
+			continue;
 		}
 		stringstream lineStrm(line);
 		string contig;
