@@ -46,7 +46,8 @@ void printHelp(void){
 	helpMessage << "       -f - optional - <STRING> The output file [STDOUT]" << std::endl;
 	helpMessage << "       -B - optional - Output in bed format " << std::endl;
 	helpMessage << "       -p - optional - <STRING> A prefix for the output sequence name [NONE]" << std::endl;
-	helpMessage << "       -n - optional - Write just he region name" << std::endl;	
+	helpMessage << "       -n - optional - Write just he region name" << std::endl;
+	helpMessage << "       -x - optional - use XS for sequences aligned without clipping." << std::endl;	
 	std::cerr << helpMessage.str() << std::endl;
 };
 
@@ -54,7 +55,9 @@ int main(int argc, char* argv[]) {
 	bool regionOnly=false;
 	int c;
 	GlobalOptions globalOptions;
-	while ((c = getopt(argc, argv, "hnr:s:f:p:R:b:B")) != -1){
+	MapDBOptions opts;
+	opts.keepForward=true;
+	while ((c = getopt(argc, argv, "hnr:s:f:p:R:b:Bx")) != -1){
 		switch (c){
 		case 'h':
 			{
@@ -69,6 +72,11 @@ int main(int argc, char* argv[]) {
 	  case 'R': 
 			{
 				globalOptions.regionFile = optarg;
+				break;
+			}
+	  case 'x': 
+			{
+				opts.useXS = true;
 				break;
 			}
 		case 'r':
@@ -170,7 +178,9 @@ int main(int argc, char* argv[]) {
 	ClipMap clipMap;
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
-	nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, true);
+
+	
+	nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, opts);
 	map<string, Strands>::iterator strandIt, strandEnd;
 	for (strandIt = strands.begin(); strandIt != strands.end(); ++strandIt) {
 		int si;

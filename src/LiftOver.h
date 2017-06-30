@@ -131,10 +131,11 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 									int startBlockIndex=0) {
 	
 	if (posMap.find(contig) == posMap.end()) {
+		/*
 		PosMap::iterator mapit;
 		for (mapit = posMap.begin(); mapit != posMap.end(); ++mapit){
 			cerr << mapit->first << endl;
-		}
+			}*/
 		return false;
 	}
 	int i;
@@ -152,6 +153,37 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 	return false;
 }
 
+class MapDBOptions {
+ public:
+	bool keepForward;
+	bool useXS;
+	MapDBOptions() {
+		keepForward=false;
+		useXS = false;
+	}
+};
+
+bool GetKeyValue(string &key, string &kvp, int &value) {
+	if (key.size() <= kvp.size() and kvp.substr(0,key.size()) == key) {
+		string valueStr = kvp.substr(key.size()+3);
+		value = atoi(valueStr.c_str());
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool SearchKeyValue(string key, vector<string> &kvps, int &value) {
+	int i;
+	for (i = 0; i< kvps.size(); i++) {
+		if (GetKeyValue(key, kvps[i], value)) {
+			return true;
+		}
+	}
+	return false;
+}
+			
 int BuildMapDB(ifstream &samIn, int dir,
 							 map<string, MultiBlocks > &posMap,
 							 map<string, Strands> &strands,
@@ -159,7 +191,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 							 map<string, vector<string> > &chromMap,
 							 map<string, vector<string> > &seqMap,
 							 ClipMap &clipMap,
-							 bool keepForward=false) {
+							 MapDBOptions &opts) {
 	int contigIndex = 0;
 	string previousContig = "";
 	while (samIn) {
@@ -186,7 +218,24 @@ int BuildMapDB(ifstream &samIn, int dir,
 		string seq;
 		int flag;		
 		lineStrm >> contig >> flag >> chrom >> pos >> mapq >> cigar >> t1 >> t2 >> alnLength >> seq;
-
+		int xs = 0;
+		int xe = 0;
+		if (opts.useXS) {
+			string qual;
+			lineStrm >> qual;
+			vector<string> kvps;
+			while(lineStrm) {
+				string kvp;
+				lineStrm >> kvp;
+				if (kvp != "") {
+					kvps.push_back(kvp);
+				}
+			}
+			SearchKeyValue("XS", kvps, xs);
+			SearchKeyValue("XE", kvps, xe);
+			
+		}
+		
 		if (chrom == "*") {
 			continue;
 		}
@@ -229,7 +278,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 		// portion
         
 		int nStrand = 1;
-		if ( keepForward == false and flag & 0x10 ) {
+		if ( opts.keepForward == false and flag & 0x10 ) {
 			// bottom strand alignment
 
 			nStrand = -1;
@@ -268,10 +317,15 @@ int BuildMapDB(ifstream &samIn, int dir,
 		int frontHardClip = 0;
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
+			if (i == 0 and opts.useXS) {
+				frontClip = xs-1;
+				qPos += nStrand*frontClip;
+			}
+			
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
 			char op = cigar[i];
 			
-			if (op == 'S' or op == 'H') {
+			if ((op == 'S' or op == 'H') and opts.useXS == false ) {
 				if ((op == 'H' or op == 'S') and alnStarted == false) {
 					if (op == 'H') {
 						frontHardClip = len;
@@ -279,28 +333,28 @@ int BuildMapDB(ifstream &samIn, int dir,
 					frontClip = len;
 					qPos += nStrand*frontClip;
 				}
-				else if ((op == 'H' or op == 'S') and alnStarted == true) {
-					endClip = len;
-					qPos += nStrand*len;
-				}
+					else if ((op == 'H' or op == 'S') and alnStarted == true) {
+						endClip = len;
+						qPos += nStrand*len;
+					}
 			}
 			else {
 				alnStarted = true;
 				if (op == 'M' or op == '=' or op == 'X') {
+					
+					// Block.Pos() should be the *least* value of the
+					// alignment in the Block. This occurs naturally
+					// when the source is the reference (whether the
+					// alignment is top or bottom strand), but if the
+					// source is query, the the least value occurs at
+					// the end of the = alignment. DG. Jan 5, 2017
 
-                   // Block.Pos() should be the *least* value of the
-                   // alignment in the Block. This occurs naturally
-                   // when the source is the reference (whether the
-                   // alignment is top or bottom strand), but if the
-                   // source is query, the the least value occurs at
-                   // the end of the = alignment. DG. Jan 5, 2017
-
-                   int nSetQPos = qPos;
-                   int nSetTPos = tPos;
-                   if ( ( dir == Q ) && ( flag & 0x10 ) ) {
-                      nSetQPos = qPos - len + 1;
-                      nSetTPos = tPos + len - 1;
-                   }
+					int nSetQPos = qPos;
+					int nSetTPos = tPos;
+					if ( ( dir == Q ) && ( flag & 0x10 ) ) {
+						nSetQPos = qPos - len + 1;
+						nSetTPos = tPos + len - 1;
+					}
 
 					curBlocks->push_back(Block(nSetTPos, nSetQPos, len));
 					nMatch += len;

@@ -21,6 +21,8 @@ int main(int argc, char* argv[]) {
 		cout << "Usage: samLiftover file.sam coordinates.bed out.bed [options]" << endl;
 		cout << "  --dir 0|1 (0)  Map from coordinates on the query to the target." << endl;
 		cout << "                 A value of 1 maps from the target to the query." << endl;
+		cout << "  --useXS        Use the XS keyword value pair to determine where the alignment "<<endl
+				 << "                 starts in the query." << endl;
 		exit(1);
 	}
 	int dir = Q;
@@ -33,13 +35,22 @@ int main(int argc, char* argv[]) {
 	ofstream badOut(outName.c_str());
 	int argi = 4;
 	bool printBedLine = false;
+	bool useXS = false;
+	MapDBOptions opts;
 	if (argc >= 5) {
 		while (argi < argc) {
 			if (strcmp(argv[argi], "--dir") == 0) {
 				dir = atoi(argv[++argi]);
 			}
-			if (strcmp(argv[argi], "--bedline") == 0) {
+			else if (strcmp(argv[argi], "--bedline") == 0) {
 			  printBedLine = true;
+			}
+			else if (strcmp(argv[argi], "--useXS") == 0) {
+				opts.useXS = true;
+			}
+			else {
+				cout << "ERROR with option " << argv[argi] << endl;
+				exit(1);
 			}
 			++argi;
 		}
@@ -64,7 +75,8 @@ int main(int argc, char* argv[]) {
 	ClipMap clipMap;
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
-  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap);
+	
+  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, opts);
 	string bedLine;
 
 	while (getline(bedIn, bedLine)) {
@@ -88,13 +100,13 @@ int main(int argc, char* argv[]) {
 		int startContigIndex=0, endContigIndex=0;
 
 		foundStart = SearchContig(posMap, chromMap, strands, lengths,
-								  chrom, start+1, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex);
+															chrom, start, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex);
 
 
         // end-1 is the 0-based coordinate for the end of the alignment
         // and SearchContig uses 0-based coordinates (DG, 161205)
 		foundEnd = SearchContig(posMap, chromMap, strands, lengths,
-								chrom, end, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
+														chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
 
 
 		if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
@@ -103,7 +115,7 @@ int main(int argc, char* argv[]) {
 		  mapEnd   = temp;
 		}
         
-        --mapStart; // convert to 0-based for bed format
+    --mapStart; // convert to 0-based for bed format
 
 		if (foundStart == false or foundEnd == false or mapChrom != mapEndChrom) {
 
