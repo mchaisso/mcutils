@@ -78,7 +78,7 @@ title <- ""
 if (is.null(args$title) == F) {
   title <- args$title;
 }
-plot(c(),xlim=xRange,ylim=yRange,xlab=args$xlabel,ylab=args$ylabel, axes=showAxes, main=title)
+plot(c(),xlim=xRange,ylim=yRange,xlab=args$xlabel,ylab=args$ylabel, axes=showAxes, main=title, asp=1)
 nCols <- dim(t)[2]
 
 GetTicks <- function(start, span) {
@@ -118,21 +118,33 @@ if (is.null(args$targettrack) == F) {
 
 strands <- rep(0,length(t$V4))
 
-for (idx in seq(min(t$V4),max(t$V4))) {
+for (idx in unique(t$V4)) {
   i <- which(t$V4 == idx);
+  
   lcol = pal[(idx%%nColors)+1 ];
   i = which(t$V4 == idx & t$V5 == 0) 	;
+  lineWidth <- 0.5
 
-  segments(t$V1[i], t$V2[i], t$V1[i]+t$V3[i], t$V2[i]+t$V3[i], col=lcol, lwd=lineWidth);
+#  if (dim(t)[2] == 6) {
+#    ltype=t$V6[i]
+#  } else {
+#    ltype=rep(1, length(i))
+#  }
+  ltype=1
+  segments(t$V1[i], t$V2[i], t$V1[i]+t$V3[i], t$V2[i]+t$V3[i], col=lcol, lwd=lineWidth,lty=ltype);
   i <- which(t$V4 == idx & t$V5 == 1);
-
-  segments(t$V1[i], t$V2[i], x1=t$V1[i]-t$V3[i], y1=t$V2[i]+t$V3[i], col=lcol, lwd=lineWidth);
+  segments(t$V1[i], t$V2[i], x1=t$V1[i]-t$V3[i], y1=t$V2[i]+t$V3[i], col=lcol, lwd=lineWidth,lty=ltype);
 
 }
 
 PlotGeneX <- function(b, y, height) {
+
+
   start <- as.integer(b$V2[1])
   end <- as.integer(b$V3[1])
+  ##
+  ## Plot gene models. Kind of a pain.
+  ## 
   if (dim(b)[1] == 12) {
     sizes <- sapply(unlist(strsplit(as.character(b$V11[1]), ",")),as.integer)
     starts <- sapply(unlist(strsplit(as.character(b$V12[1]), ",")), as.integer) + start
@@ -140,7 +152,12 @@ PlotGeneX <- function(b, y, height) {
     starts <- c(start);
     sizes <- c(end-start);
   }
-  rect( starts, y, starts+sizes, y+height, col="blue")
+  if (dim(b)[1] == 1 & length(b) == 5){
+    fillCol=as.character(b$V5[1]);
+  } else {
+    fillCol="grey";
+  }
+  rect( starts, y, starts+sizes, y+height, col=fillCol)
 }
 
 
@@ -150,11 +167,20 @@ if (length(queryTrack) > 0) {
   tHeight = ySpan*frac
 
   nTrack <- length(queryTrack$V2)
-  print("NTracks")
-  print(nTrack)
+
+
   nRows <- 25
-  yOffset <- seq(0,nCols)*tHeight  
-  yOffsets <- yOffset[(seq(1,nTrack)%%(nRows+1))+1]
+  n <- length(queryTrack$V2)
+  yOffsets <- rep(0,n)
+  lastX <- rep(0,n)
+  for (j in seq(1,n)) {
+    curRow <- 1
+    while(curRow < n & lastX[curRow] > queryTrack$V2[j]) {
+      curRow <- curRow+1;
+    }
+    lastX[curRow] <- queryTrack$V3[j];
+    yOffsets[j] <- curRow*tHeight;
+  }
 
   
   xB <- as.numeric(queryTrack$V2)
@@ -163,8 +189,8 @@ if (length(queryTrack) > 0) {
   yT <- rep(tHeight*-1.25, nTrack)+min(t$V2) + yOffsets
   yBText <- rep(tHeight, nTrack)+min(t$V2)  
   h <- abs(yB[1]-yT[1])
-  rect(xB,yT+h/2,xT,yT+h/2,col="blue")
-  print(seq(1,length(xB)))
+  rect(xB,yT+h/2,xT,yT+h/2,col=t$V5)
+
   lapply(seq(1,length(xB)), function(i) PlotGeneX(queryTrack[i,], yT[i], h))
   lapply(seq(1,length(xB)), function(i) print(queryTrack[i,]))
 
@@ -180,9 +206,10 @@ if (length(queryTrack) > 0) {
 
 
 
-PlotGeneY <- function(b, x, width) {
+PlotGeneY <- function(b, x, width, yOffset) {
+
   start <- as.integer(b$V2[1])
-  end <- as.integer(b$V3[2])
+  end <- as.integer(b$V3[1])
   if (dim(b)[1]==12) {
     sizes <- sapply(unlist(strsplit(as.character(b$V11[1]), ",")),as.integer)
     starts <- sapply(unlist(strsplit(as.character(b$V12[1]), ",")), as.integer)
@@ -190,29 +217,54 @@ PlotGeneY <- function(b, x, width) {
     starts <- c(start)
     sizes <- c(end-start)
   }
-  rect(x, start+starts, x+width, start+starts+sizes, col="gray")
+  if (dim(b)[1] == 1 & length(b) == 5) {
+    fillCol=as.character(b$V5[1]);
+  } else {
+    fillCol="gray";
+  }
+  rect(x, starts, x+width, starts+sizes, col=fillCol)
+  text(x+2*width, end+yOffset, labels=b$V4[1], pos=2, srt=-90)  
 }
 
 if (length(targetTrack) > 0) {
 
 #  par(xpd=NA)
-  nCols = 1
+
   qWidth <- xSpan*frac
-  xOffset <- seq(0,nCols)*qWidth
+
+  ##
+  ## Determine layering so that genes do not overlap.
+  ##
+  n <- length(targetTrack$V1)
+  trackLastY <- rep(0, n)
+  
+  xOffset <- rep(0,n)
+  xRange <- max(t$V2)-min(t$V2)
+  yRange <- max(t$V3)-min(t$V3)
+  yOffset <- yRange*0.01
+  # Give some space for text
+  textRange <- xRange*0.1
+  for (j in seq(1,n)) {
+    curTrack <- 1
+    while (trackLastY[curTrack] > targetTrack$V2[j] & curTrack < n) {
+      curTrack <- curTrack+1;
+    }
+    trackLastY[curTrack] <- targetTrack$V3[j]
+    xOffset[j] <- qWidth*curTrack;
+  }
 
   nTrack <- length(targetTrack$V2)
 #  xOffsets <- xOffset[(seq(1,nTrack)%%(nCols+1))+1]
-  xOffsets <- c(0)
-  xB <- rep(qWidth*0.25, nTrack)+min(t$V1) + xOffsets
-  xT <- rep(qWidth*-1.25, nTrack)+min(t$V1) + xOffsets
+
+  xB <- rep(qWidth*0.25, nTrack)+min(t$V2) + xOffset
+  xT <- rep(qWidth*1.25, nTrack)+min(t$V2) + xOffset
   yB <- as.numeric(targetTrack$V2)
   yT <- as.numeric(targetTrack$V3)
   xBText <- rep(qWidth, nTrack)+min(t$V1)
   w <- abs((xT-xB)/2)
-  rect(xT+w,yB,xT+w,yT,col="blue")
-  lapply(seq(1,length(targetTrack)), function(i) PlotGeneY(targetTrack[i,], xT+w/2, w))
+  lapply(seq(1,length(targetTrack$V1)), function(tt) PlotGeneY(targetTrack[tt,], xT[tt], w, yOffset))
   
-  text(xB +qWidth, (yB+yT)/2, labels=targetTrack$V4, pos=2, srt=-90)
+
   if (is.null(args$drawline) == F) {
     idx = which(targetTrack$V4 !="")
     lapply(idx, function(i) { segments(xRange[1], yB[i], x1=xRange[2], lty=2,lwd=0.1)})

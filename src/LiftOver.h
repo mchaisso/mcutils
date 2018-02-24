@@ -2,7 +2,11 @@
 #define LIFT_OVER_H_
 #define Q  0
 #define T 1
-
+#include <vector>
+#include <map>
+#include <assert.h>
+#include <algorithm>
+using namespace std;
 class Block {
 public:
 	int t,q,l;
@@ -131,11 +135,6 @@ bool SearchContig(PosMap &posMap, ChromMap &chromMap, StrandMap &strandMap, Leng
 									int startBlockIndex=0) {
 	
 	if (posMap.find(contig) == posMap.end()) {
-		/*
-		PosMap::iterator mapit;
-		for (mapit = posMap.begin(); mapit != posMap.end(); ++mapit){
-			cerr << mapit->first << endl;
-			}*/
 		return false;
 	}
 	int i;
@@ -220,6 +219,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 		lineStrm >> contig >> flag >> chrom >> pos >> mapq >> cigar >> t1 >> t2 >> alnLength >> seq;
 		int xs = 0;
 		int xe = 0;
+		int xl = 0;
 		if (opts.useXS) {
 			string qual;
 			lineStrm >> qual;
@@ -233,7 +233,7 @@ int BuildMapDB(ifstream &samIn, int dir,
 			}
 			SearchKeyValue("XS", kvps, xs);
 			SearchKeyValue("XE", kvps, xe);
-			
+			SearchKeyValue("XL", kvps, xl);
 		}
 		
 		if (chrom == "*") {
@@ -278,31 +278,33 @@ int BuildMapDB(ifstream &samIn, int dir,
 		// portion
         
 		int nStrand = 1;
+		int strand = flag & 0x10;
 		if ( opts.keepForward == false and flag & 0x10 ) {
 			// bottom strand alignment
-
-			nStrand = -1;
-
-			int nQueryLength = 0;
-			i = 0;
-			while( i < cigar.size() ) {
-				int len = atoi(&cigar[i]);
-
-				// skip over the leading number
-				while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
-
-				char op = cigar[i];
-
-
-				if ( (char*) strchr( "SHMI=X", op ) != 0 ) {
-					nQueryLength += len;
-
-				}
-				++i;
+				nStrand = -1;
+			if (opts.useXS == true) {
+				qPos = xl;
 			}
+			else {
+				int nQueryLength = 0;
+				i = 0;
+				while( i < cigar.size() ) {
+					int len = atoi(&cigar[i]);
+
+					// skip over the leading number
+					while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
+
+					char op = cigar[i];
 
 
-			qPos = nQueryLength;  // start at last base position (1-based)
+					if ( (char*) strchr( "SHMI=X", op ) != 0 ) {
+						nQueryLength += len;
+
+					}
+					++i;
+				}
+				qPos = nQueryLength;  // start at last base position (1-based)
+			}
 		}
 		else {
 			qPos = 1; // start at 1st base position (1-based)
@@ -318,7 +320,12 @@ int BuildMapDB(ifstream &samIn, int dir,
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
 			if (i == 0 and opts.useXS) {
-				frontClip = xs-1;
+				if (nStrand == 1) {
+					frontClip = xs-1;
+				}
+				else {
+					frontClip = xl - xe;
+				}
 				qPos += nStrand*frontClip;
 			}
 			
