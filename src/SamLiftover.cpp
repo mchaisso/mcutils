@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 			foundEnd = SearchContig(posMap, chromMap, strands, lengths,
 															chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
 
-			cerr << "found start " << (int) foundStart << " " << startSearchAt << " foundEnd " << (int) foundEnd << endl;
+
 			if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
 				int temp = mapStart;
 				mapStart = mapEnd; 
