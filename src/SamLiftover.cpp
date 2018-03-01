@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
 				badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
 			}
 			else {
-				bedOut << "NA" << endl;
+				bedOut << "NA\tNA\tNA\t" << chrom <<"\t" << start <<"\t" << end << endl;
 			}
 		}
 		else {
