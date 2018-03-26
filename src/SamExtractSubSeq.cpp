@@ -46,7 +46,7 @@ void printHelp(void){
 	helpMessage << "       -f - optional - <STRING> The output file [STDOUT]" << std::endl;
 	helpMessage << "       -B - optional - Output in bed format " << std::endl;
 	helpMessage << "       -p - optional - <STRING> A prefix for the output sequence name [NONE]" << std::endl;
-	helpMessage << "       -n - optional - Write just he region name" << std::endl;
+	helpMessage << "       -n - optional - Write just the region name" << std::endl;
 	helpMessage << "       -x - optional - use XS for sequences aligned without clipping." << std::endl;	
 	std::cerr << helpMessage.str() << std::endl;
 };

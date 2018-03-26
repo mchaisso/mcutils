@@ -19,6 +19,9 @@ typedef pair<int,int> Coordinate;
 int main(int argc, char* argv[]) {
 	if (argc < 4) {
 		cout << "Usage: samLiftover file.sam coordinates.bed out.bed [options]" << endl;
+		cout << "  --printNA      Print NA for values that could not be mapped, rather than" << endl
+				 << "                 placing them in the \"out.bed.bad\" file. This enables line" << endl
+				 << "                 parity with the input." << endl;
 		cout << "  --dir 0|1 (0)  Map from coordinates on the query to the target." << endl;
 		cout << "                 A value of 1 maps from the target to the query." << endl;
 		cout << "  --useXS        Use the XS keyword value pair to determine where the alignment "<<endl
@@ -31,12 +34,11 @@ int main(int argc, char* argv[]) {
 	ofstream bedOut(argv[3]);
 	string outName = argv[3];
 	
-	outName += ".bad";
-	ofstream badOut(outName.c_str());
 	int argi = 4;
 	bool printBedLine = false;
 	bool useXS = false;
 	MapDBOptions opts;
+	bool printNA = false;
 	if (argc >= 5) {
 		while (argi < argc) {
 			if (strcmp(argv[argi], "--dir") == 0) {
@@ -44,6 +46,9 @@ int main(int argc, char* argv[]) {
 			}
 			else if (strcmp(argv[argi], "--bedline") == 0) {
 			  printBedLine = true;
+			}
+			else if (strcmp(argv[argi], "--printNA") == 0) {
+			  printNA = true;
 			}
 			else if (strcmp(argv[argi], "--useXS") == 0) {
 				opts.useXS = true;
@@ -64,7 +69,12 @@ int main(int argc, char* argv[]) {
 	if (samIn.good() == false) {
 		cerr << "Could not open " << argv[1] << endl;
 		exit(1);
-	}		
+	}
+	ofstream badOut;
+	if (printNA == false) {
+		outName += ".bad";
+		badOut.open(outName.c_str());
+	}
 
 	int contigIndex = 0;
 	map<string, MultiBlocks > posMap;
@@ -78,7 +88,7 @@ int main(int argc, char* argv[]) {
 	
   nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, opts);
 	string bedLine;
-
+	cerr << "mapdb " << nContigs << endl;
 	while (getline(bedIn, bedLine)) {
 		if (bedLine.size() == 0) {
 			break;
@@ -95,31 +105,49 @@ int main(int argc, char* argv[]) {
 			remainder.push_back(val);
 		  }
 		}
-		bool foundStart, foundEnd;
+		bool foundStart=true, foundEnd=true;
 				string startContig="", endContig="";
 		int startContigIndex=0, endContigIndex=0;
-
-		foundStart = SearchContig(posMap, chromMap, strands, lengths,
-															chrom, start, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex);
-
-
-        // end-1 is the 0-based coordinate for the end of the alignment
-        // and SearchContig uses 0-based coordinates (DG, 161205)
-		foundEnd = SearchContig(posMap, chromMap, strands, lengths,
-														chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
+		int startSearchAt=0;
+		while (posMap.find(chrom) != posMap.end() and startSearchAt < posMap[chrom].size() and
+					 (foundStart == true or foundEnd == true)) {
+			foundStart = SearchContig(posMap, chromMap, strands, lengths,
+																chrom, start, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex,
+																startSearchAt);
 
 
-		if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
-		  int temp = mapStart;
-		  mapStart = mapEnd; 
-		  mapEnd   = temp;
-		}
+			// end-1 is the 0-based coordinate for the end of the alignment
+			// and SearchContig uses 0-based coordinates (DG, 161205)
+			foundEnd = SearchContig(posMap, chromMap, strands, lengths,
+															chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
+
+
+			if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
+				int temp = mapStart;
+				mapStart = mapEnd; 
+				mapEnd   = temp;
+				break;				
+			}
         
-    --mapStart; // convert to 0-based for bed format
-
+			--mapStart; // convert to 0-based for bed format
+			
+			if (foundStart == true and foundEnd==true and mapChrom == mapEndChrom ) {
+				break;
+			}
+			else {
+				//
+				// Limit search to contigs after the currently found contig.
+				//
+				startSearchAt+=startContigIndex+1;
+			}
+		}
 		if (foundStart == false or foundEnd == false or mapChrom != mapEndChrom) {
-
-		  badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
+			if (printNA == false) {
+				badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
+			}
+			else {
+				bedOut << "NA\tNA\tNA\t" << chrom <<"\t" << start <<"\t" << end << endl;
+			}
 		}
 		else {
 			bedOut << mapChrom << "\t" << mapStart << "\t" << mapEnd;

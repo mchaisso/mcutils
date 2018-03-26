@@ -5,6 +5,8 @@
 #include <fstream>
 #include <math.h>
 #include <string.h>
+#include "LiftOver.h"
+
 using namespace std;
 
 void PrintUsage() {
@@ -14,7 +16,8 @@ void PrintUsage() {
 			 << "    --blocks           Write contiguously aligned blocks." << endl
 			 << "    --minLength        Only print from sequences at least this length" << endl
 			 << "    --seqLength        Print the length of the query sequence" << endl
-			 << "    --ignoreN          Do not penalize \"N\"'s" << endl;
+			 << "    --ignoreN          Do not penalize \"N\"'s" << endl
+			 << "    --useXS            Use XS when computing read pos." << endl;	
 }
 
 int main(int argc, char* argv[]) {
@@ -31,6 +34,8 @@ int main(int argc, char* argv[]) {
 	int minLength = 0;
 	bool printSeqLength = false;
 	bool penalizeN = true;
+	bool useXS = false;
+
 	while (argi < argc) {
 		if (strcmp(argv[argi], "--reportAccuracy") == 0) {
 			reportAccuracy = true;
@@ -50,6 +55,10 @@ int main(int argc, char* argv[]) {
 		else if (strcmp(argv[argi], "--minLength") == 0) {		
 			++argi;
 			minLength = atoi(argv[argi]);
+		}
+		else if (strcmp(argv[argi], "--useXS") == 0) {
+
+			useXS=true;
 		}
 		else {
 			PrintUsage();
@@ -83,9 +92,10 @@ int main(int argc, char* argv[]) {
 		int strandFlag = 0x16;
 		lineStrm >> contig >> flag >> chrom >> pos >> mapq >> cigar >> t1 >> t2 >> alnLength >> seq;
 		int strand = 0;
-		
+		int nStrand = 1;
 		if (flag & strandFlag) {
 			strand = 1;
+			nStrand=-1;
 		}
 		if (chrom == "*") {
 			continue;
@@ -103,13 +113,41 @@ int main(int argc, char* argv[]) {
 		bool alnStarted = false;
 		int refPos = pos;
 		int qPos = 0;
+		int xs=0,xe=0,xl=0;
+		if (useXS) {
+			string qual;
+			lineStrm >> qual;
+			vector<string> kvps;
+			while(lineStrm) {
+				string kvp;
+				lineStrm >> kvp;
+				if (kvp != "") {
+					kvps.push_back(kvp);
+				}
+			}
+			SearchKeyValue("XS", kvps, xs);
+			SearchKeyValue("XE", kvps, xe);
+			SearchKeyValue("XL", kvps, xl);
+
+		}
+		if (useXS) {
+			if (nStrand == 1) {
+				frontClip = xs-1;
+			}
+			else {
+				frontClip = xl - xe;
+			}
+		}
+		
 		while (i < cigar.size()) {
 			int len = atoi(&cigar[i]);
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
 			char op = cigar[i];
-			if (op == 'S' or op == 'H') {
-				if ((op == 'H' or op == 'S') and alnStarted == false) {
+			 if (op == 'S' or op == 'H') {
+				
+				if ((op == 'H' or op == 'S') and alnStarted == false and useXS == false) {
 					frontClip = len;
+					
 					if (op == 'S') {
 						qPos += len;
 					}
