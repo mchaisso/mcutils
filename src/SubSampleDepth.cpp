@@ -9,7 +9,8 @@ int main(int argc, char* argv[]) {
 		string chrom;
 		int start;
 		int cov;
-		if ((cin >> chrom >> start >> cov) == 0) {
+		cin >> chrom >> start >> cov;
+		if (cin.good() == false) {
 			break;
 		}
 		if (start % subsample == 0) {
