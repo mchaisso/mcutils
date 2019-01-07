@@ -26,6 +26,8 @@ int main(int argc, char* argv[]) {
 		cout << "                 A value of 1 maps from the target to the query." << endl;
 		cout << "  --useXS        Use the XS keyword value pair to determine where the alignment "<<endl
 				 << "                 starts in the query." << endl;
+		cout << "  --printNA      Print NA for lines that do not lift over so that the output" << endl;
+	 	cout << "                 always has the same number of lines as the input." << endl;
 		exit(1);
 	}
 	int dir = Q;
@@ -141,7 +143,7 @@ int main(int argc, char* argv[]) {
 				startSearchAt+=startContigIndex+1;
 			}
 		}
-		if (foundStart == false or foundEnd == false or mapChrom != mapEndChrom) {
+		if (foundStart == false or foundEnd == false or mapChrom == "" or mapChrom != mapEndChrom) {
 			if (printNA == false) {
 				badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
 			}

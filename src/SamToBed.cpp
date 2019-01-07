@@ -17,7 +17,9 @@ void PrintUsage() {
 			 << "    --minLength        Only print from sequences at least this length" << endl
 			 << "    --seqLength        Print the length of the query sequence" << endl
 			 << "    --ignoreN          Do not penalize \"N\"'s" << endl
-			 << "    --useXS            Use XS when computing read pos." << endl;	
+			 << "    --useXS            Use XS when computing read pos." << endl
+			 << "    --flag             Output the sam flag." << endl
+			 << "    --useH             Incorporate hard clipping when computing the boundaries of the reads." << endl;	
 }
 
 int main(int argc, char* argv[]) {
@@ -35,6 +37,8 @@ int main(int argc, char* argv[]) {
 	bool printSeqLength = false;
 	bool penalizeN = true;
 	bool useXS = false;
+	bool useH = false;
+	bool writeFlag = false;
 
 	while (argi < argc) {
 		if (strcmp(argv[argi], "--reportAccuracy") == 0) {
@@ -57,9 +61,15 @@ int main(int argc, char* argv[]) {
 			minLength = atoi(argv[argi]);
 		}
 		else if (strcmp(argv[argi], "--useXS") == 0) {
-
 			useXS=true;
 		}
+		else if (strcmp(argv[argi], "--flag") == 0) {
+			writeFlag=true;
+		}
+		else if (strcmp(argv[argi], "--useH") == 0) {
+			useH=true;
+		}
+
 		else {
 			PrintUsage();
 			cout << "Unknown option " << argv[argi] << endl;
@@ -144,13 +154,12 @@ int main(int argc, char* argv[]) {
 			while (i < cigar.size() and cigar[i] >= '0' and cigar[i] <= '9') { i++;}
 			char op = cigar[i];
 			 if (op == 'S' or op == 'H') {
-				
-				if ((op == 'H' or op == 'S') and alnStarted == false and useXS == false) {
-					frontClip = len;
-					
-					if (op == 'S') {
-						qPos += len;
-					}
+				 if (op == 'H' and useH and alnStarted == false) {
+					 frontClip += len;
+				 }
+				 if (op == 'S' and alnStarted == false and useXS == false) {					 
+					frontClip += len;					
+					qPos += len;					
 				}
 				else if ((op == 'H' or op == 'S') and alnStarted == true) {
 					endClip = len;
@@ -217,6 +226,9 @@ int main(int argc, char* argv[]) {
 			}
 			if (printSeqLength) {
 				cout << "\t" << seq.size();
+			}
+			if (writeFlag) {
+				cout << "\t" << flag;
 			}
 			cout << endl;
 		}

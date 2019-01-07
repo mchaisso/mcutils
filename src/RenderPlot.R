@@ -73,12 +73,16 @@ if (is.null(args$xend) == F) {
 xRange <- range(t$V1)
 xRange[1] <- max(0,xRange[1])
 yRange <- range(t$V2)
+yRange[1] <- max(0,yRange[1])
+maxDim <- max(xRange[2],yRange[2])
+xRange[2] <- maxDim
+yRange[2] <- maxDim
 options(scipen=20)
 title <- ""
 if (is.null(args$title) == F) {
   title <- args$title;
 }
-plot(c(),xlim=xRange,ylim=yRange,xlab=args$xlabel,ylab=args$ylabel, axes=showAxes, main=title, asp=1)
+plot(c(),xlim=xRange,ylim=yRange,xlab=args$xlabel,ylab=args$ylabel, axes=showAxes, main=title)
 nCols <- dim(t)[2]
 
 GetTicks <- function(start, span) {
