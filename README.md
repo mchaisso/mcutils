@@ -1,16 +1,5 @@
 This is a set of tools I find helpful for working with whole genome
-alignments stored in the SAM format.  Blasr (from this repository 
-only: https://github.com/mchaisso/blasr ), and bwa-mem may both be
-used to generate whole-genome alignments.
-
-To build:
-
-    cd src && make && make install
-
-The blasr command is:
-
-		sawriter target_genome.fasta
-    blasr query_genome.fasta target_genome.fasta -alignContigs -maxAnchorGap 30000 -sam -minMapQV 30
+alignments stored in the SAM format.  
 
 
 The programs are:
