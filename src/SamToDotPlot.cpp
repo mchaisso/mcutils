@@ -5,10 +5,12 @@
 #include <fstream>
 #include <math.h>
 #include <string.h>
+#include <assert.h>
+
 using namespace std;
 int main(int argc, char* argv[]) {
 	if (argc < 2) {
-		cout << "Usage: samToBed file.sam [seqlen]" << endl;
+		cout << "Usage: samToDotPlot file.sam [seqlen]" << endl;
 		cout << " seqLen is the length of the query." << endl;
 		exit(1);
 	}
@@ -93,6 +95,7 @@ int main(int argc, char* argv[]) {
 				if (strand != 0) {
 					qPlotPos = seqLen - qPos;
 				}
+				assert(qPlotPos >= 0);				
 				if (op == 'M') {
 					cout << qPlotPos << "\t" << pos + tPos << "\t"  << len << "\t" << contigIndex << "\t" << strand << endl;
 					nMatch += len;

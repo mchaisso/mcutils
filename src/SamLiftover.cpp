@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
 	cerr << "Building map database." << endl;
 	int nContigs = 0;
 	
-  nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, opts);
+	nContigs = BuildMapDB(samIn, dir, posMap, strands, lengths, chromMap, seqMap, clipMap, opts);
 	string bedLine;
 	cerr << "mapdb " << nContigs << endl;
 	while (getline(bedIn, bedLine)) {
@@ -111,19 +111,24 @@ int main(int argc, char* argv[]) {
 				string startContig="", endContig="";
 		int startContigIndex=0, endContigIndex=0;
 		int startSearchAt=0;
+		int mapStrand=0;
 		while (posMap.find(chrom) != posMap.end() and startSearchAt < posMap[chrom].size() and
 					 (foundStart == true or foundEnd == true)) {
 			foundStart = SearchContig(posMap, chromMap, strands, lengths,
-																chrom, start, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex,
-																startSearchAt);
+						  chrom, start, mapChrom, mapStart, mapFrontStrand, startContig, startContigIndex,
+						  startSearchAt);
 
 
 			// end-1 is the 0-based coordinate for the end of the alignment
 			// and SearchContig uses 0-based coordinates (DG, 161205)
 			foundEnd = SearchContig(posMap, chromMap, strands, lengths,
-															chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
+						chrom, end-1, mapEndChrom, mapEnd, mapEndStrand, endContig, endContigIndex);
 
-
+			mapStrand = 0;
+			if (mapFrontStrand != 0) {
+			  mapStrand = 1;
+			}
+			
 			if (mapFrontStrand == mapEndStrand and mapFrontStrand != 0) {
 				int temp = mapStart;
 				mapStart = mapEnd; 
@@ -140,19 +145,20 @@ int main(int argc, char* argv[]) {
 				//
 				// Limit search to contigs after the currently found contig.
 				//
+
 				startSearchAt+=startContigIndex+1;
 			}
 		}
 		if (foundStart == false or foundEnd == false or mapChrom == "" or mapChrom != mapEndChrom) {
 			if (printNA == false) {
-				badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << endl;
+			  badOut << bedLine << " " << (int) foundStart << " " << (int) foundEnd << " " << (int) (mapStart == mapEnd) << "\t0" << endl;
 			}
 			else {
-				bedOut << "NA\tNA\tNA\t" << chrom <<"\t" << start <<"\t" << end << endl;
+			  bedOut << "NA\tNA\tNA\t" << chrom <<"\t" << start <<"\t" << end << "\t" << mapStrand << endl;
 			}
 		}
 		else {
-			bedOut << mapChrom << "\t" << mapStart << "\t" << mapEnd;
+		  bedOut << mapChrom << "\t" << mapStart << "\t" << mapEnd << "\t" << mapStrand ;
 			int s;
 			for (s = 0; s < remainder.size(); s++) {
 				bedOut << "\t" << remainder[s];
